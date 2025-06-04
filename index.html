@@ -1,81 +1,123 @@
-# stklottry
-ntrlottry
+<!-- index.html for Real Lottery System with Firebase Auth + Razorpay -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nagaland Lottery Online</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>STKL Lottery - Live Demo</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 0; padding: 20px; }
+    h1, h2 { text-align: center; }
+    #auth-box, #lottery-box { max-width: 400px; margin: 20px auto; padding: 20px; background: #fff; box-shadow: 0 0 10px #ccc; }
+    input { width: 100%; padding: 10px; margin: 10px 0; }
+    button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; width: 100%; }
+    button:hover { background: #0056b3; }
+    ul { list-style: none; padding: 0; }
+    li { padding: 5px 0; border-bottom: 1px solid #ccc; }
+  </style>
 </head>
-<body class="bg-gray-100">
-  <div class="max-w-2xl mx-auto p-4">
-    <h1 class="text-2xl font-bold text-center mb-6">Nagaland Lottery Online</h1>
+<body>
+  <h1>🎟 STKL Lottery - Live Test</h1>
 
-    <!-- Buy Ticket Form -->
-    <div class="bg-white p-6 rounded shadow-md">
-      <h2 class="text-xl font-semibold mb-4">Buy Lottery Ticket</h2>
-      <form id="buyForm" class="space-y-4">
-        <div>
-          <label class="block mb-1">Your Name</label>
-          <input type="text" id="name" required class="w-full border p-2 rounded" />
-        </div>
-        <div>
-          <label class="block mb-1">Choose Number (0000-9999)</label>
-          <input type="number" id="number" min="0" max="9999" required class="w-full border p-2 rounded" />
-        </div>
-        <div>
-          <label class="block mb-1">Amount (in ₹)</label>
-          <input type="number" id="amount" min="10" required class="w-full border p-2 rounded" />
-        </div>
-        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Buy Ticket</button>
-      </form>
-      <p id="confirmation" class="mt-4 text-green-600 font-medium"></p>
-    </div>
+  <div id="auth-box">
+    <h2>Login / Signup</h2>
+    <input id="email" placeholder="Email">
+    <input id="password" placeholder="Password" type="password">
+    <button onclick="signUp()">Sign Up</button>
+    <button onclick="signIn()">Login</button>
+    <p>Test User: <br>Email: testuser@example.com <br>Password: 123456</p>
+    <p>Admin User: <br>Email: admin@example.com <br>Password: admin123</p>
+  </div>
 
-    <!-- Tickets List -->
-    <div class="mt-8">
-      <h2 class="text-xl font-semibold mb-4">Your Tickets</h2>
-      <ul id="ticketList" class="space-y-2"></ul>
-    </div>
+  <div id="lottery-box" style="display:none;">
+    <h2>Buy Lottery Ticket</h2>
+    <input id="amount" type="number" placeholder="Enter amount (₹)">
+    <button onclick="buyTicket()">Pay & Buy</button>
+
+    <h3>Your Tickets</h3>
+    <ul id="tickets"></ul>
+    <button onclick="logout()">Logout</button>
   </div>
 
   <script>
-    const form = document.getElementById('buyForm');
-    const ticketList = document.getElementById('ticketList');
-    const confirmation = document.getElementById('confirmation');
+    // Demo Firebase config — replace with your own later
+    const firebaseConfig = {
+      apiKey: "AIzaSyBh7M-dmUF-vghjqaKnxjbyQUaJgBN1mIM",
+      authDomain: "demo-lottery-app.firebaseapp.com",
+      projectId: "demo-lottery-app",
+      appId: "1:123456789012:web:abcdef123456"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-    let tickets = [];
-
-    form.addEventListener('submit', function(e) {
-      e.preventDefault();
-
-      const name = document.getElementById('name').value;
-      const number = document.getElementById('number').value;
-      const amount = document.getElementById('amount').value;
-
-      const ticket = {
-        name,
-        number: number.padStart(4, '0'),
-        amount,
-        time: new Date().toLocaleString()
-      };
-
-      tickets.push(ticket);
-      updateTicketList();
-
-      confirmation.textContent = `Ticket purchased successfully for ₹${amount}!`;
-      form.reset();
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById('auth-box').style.display = 'none';
+        document.getElementById('lottery-box').style.display = 'block';
+        loadTickets(user.uid);
+      } else {
+        document.getElementById('auth-box').style.display = 'block';
+        document.getElementById('lottery-box').style.display = 'none';
+      }
     });
 
-    function updateTicketList() {
-      ticketList.innerHTML = '';
-      tickets.forEach((ticket, index) => {
-        const li = document.createElement('li');
-        li.className = "bg-white p-3 rounded shadow";
-        li.innerHTML = `<strong>${ticket.name}</strong> - Number: <span class="font-mono">${ticket.number}</span> | ₹${ticket.amount} <br><small>${ticket.time}</small>`;
-        ticketList.appendChild(li);
+    function signUp() {
+      const email = document.getElementById('email').value;
+      const pass = document.getElementById('password').value;
+      auth.createUserWithEmailAndPassword(email, pass).catch(alert);
+    }
+
+    function signIn() {
+      const email = document.getElementById('email').value;
+      const pass = document.getElementById('password').value;
+      auth.signInWithEmailAndPassword(email, pass).catch(alert);
+    }
+
+    function logout() {
+      auth.signOut();
+    }
+
+    function loadTickets(uid) {
+      const ul = document.getElementById('tickets');
+      ul.innerHTML = '';
+      db.collection("tickets").where("userId", "==", uid).get().then(snapshot => {
+        snapshot.forEach(doc => {
+          const li = document.createElement('li');
+          li.innerText = `${doc.data().ticketId} - ₹${doc.data().amount}`;
+          ul.appendChild(li);
+        });
       });
+    }
+
+    function buyTicket() {
+      const amt = parseInt(document.getElementById('amount').value);
+      if (amt < 10) return alert("Minimum ₹10 required");
+
+      const options = {
+        key: "rzp_test_jhZJ8nZkLMW7Xs", // Demo Razorpay key — replace later
+        amount: amt * 100,
+        currency: "INR",
+        name: "STKL Lottery",
+        description: "Ticket Purchase",
+        handler: function (response) {
+          const uid = auth.currentUser.uid;
+          const ticketId = "STKL-" + Date.now();
+          db.collection("tickets").add({
+            userId: uid,
+            ticketId: ticketId,
+            amount: amt,
+            paid: true,
+            razorpay_payment_id: response.razorpay_payment_id
+          }).then(() => loadTickets(uid));
+        }
+      };
+
+      const rzp = new Razorpay(options);
+      rzp.open();
     }
   </script>
 </body>
