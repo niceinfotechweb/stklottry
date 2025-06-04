@@ -1,0 +1,82 @@
+# stklottry
+ntrlottry
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nagaland Lottery Online</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+  <div class="max-w-2xl mx-auto p-4">
+    <h1 class="text-2xl font-bold text-center mb-6">Nagaland Lottery Online</h1>
+
+    <!-- Buy Ticket Form -->
+    <div class="bg-white p-6 rounded shadow-md">
+      <h2 class="text-xl font-semibold mb-4">Buy Lottery Ticket</h2>
+      <form id="buyForm" class="space-y-4">
+        <div>
+          <label class="block mb-1">Your Name</label>
+          <input type="text" id="name" required class="w-full border p-2 rounded" />
+        </div>
+        <div>
+          <label class="block mb-1">Choose Number (0000-9999)</label>
+          <input type="number" id="number" min="0" max="9999" required class="w-full border p-2 rounded" />
+        </div>
+        <div>
+          <label class="block mb-1">Amount (in ₹)</label>
+          <input type="number" id="amount" min="10" required class="w-full border p-2 rounded" />
+        </div>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Buy Ticket</button>
+      </form>
+      <p id="confirmation" class="mt-4 text-green-600 font-medium"></p>
+    </div>
+
+    <!-- Tickets List -->
+    <div class="mt-8">
+      <h2 class="text-xl font-semibold mb-4">Your Tickets</h2>
+      <ul id="ticketList" class="space-y-2"></ul>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('buyForm');
+    const ticketList = document.getElementById('ticketList');
+    const confirmation = document.getElementById('confirmation');
+
+    let tickets = [];
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const name = document.getElementById('name').value;
+      const number = document.getElementById('number').value;
+      const amount = document.getElementById('amount').value;
+
+      const ticket = {
+        name,
+        number: number.padStart(4, '0'),
+        amount,
+        time: new Date().toLocaleString()
+      };
+
+      tickets.push(ticket);
+      updateTicketList();
+
+      confirmation.textContent = `Ticket purchased successfully for ₹${amount}!`;
+      form.reset();
+    });
+
+    function updateTicketList() {
+      ticketList.innerHTML = '';
+      tickets.forEach((ticket, index) => {
+        const li = document.createElement('li');
+        li.className = "bg-white p-3 rounded shadow";
+        li.innerHTML = `<strong>${ticket.name}</strong> - Number: <span class="font-mono">${ticket.number}</span> | ₹${ticket.amount} <br><small>${ticket.time}</small>`;
+        ticketList.appendChild(li);
+      });
+    }
+  </script>
+</body>
+</html>
